@@ -61,6 +61,10 @@ public class ShooterLookup {
         }
     }
 
+    public synchronized void initLookup(){
+        addSample(0, 0);
+    }
+
     public synchronized double getSmoothedVelocity(double distance, double radius) {
         if (map.isEmpty()) {
             return Double.NaN;

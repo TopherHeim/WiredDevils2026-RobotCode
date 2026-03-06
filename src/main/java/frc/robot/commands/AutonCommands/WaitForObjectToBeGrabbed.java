@@ -32,7 +32,7 @@ public class WaitForObjectToBeGrabbed extends Command {
     @Override
     public boolean isFinished() {
         // Finish the command if the current exceeds the threshold (indicating the object is grabbed)
-        if(intake.getIntakeCurrent() > currentThreshold && count2 >= 20){
+        if(intake.getCurrent() > currentThreshold && count2 >= 20){
             count++;
         }
         if(count >= 1){

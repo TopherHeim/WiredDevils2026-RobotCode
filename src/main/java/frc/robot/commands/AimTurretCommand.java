@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -52,13 +53,14 @@ public void execute() {
     }
     
     double tx = txEntry.getDouble(0.0);
-    double TxGoal =  Math.toDegrees(-1*(Math.atan2(4.021328 - swerve.getAprilOdom().getY(), 4.611624 - swerve.getAprilOdom().getX())) + Math.atan2(AprilTagCoordinates.getY(26) - swerve.getAprilOdom().getY(), AprilTagCoordinates.getX(26) - swerve.getAprilOdom().getX())) + tx;
+    NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
+    NetworkTableEntry tidEntry = table.getEntry("tid");
+    double TxGoal =  Math.toDegrees(-1*(Math.atan2(4.021328 - swerve.getAprilOdom().getY(), 4.611624 - swerve.getAprilOdom().getX())) + Math.atan2(AprilTagCoordinates.getY((int) tidEntry.getDouble(26)) - swerve.getAprilOdom().getY(), AprilTagCoordinates.getX((int) tidEntry.getDouble(26)) - swerve.getAprilOdom().getX())) + tx;
     double errorDeg = TxGoal - TurretConstants.CAMERA_TURRET_ANGLE_OFFSET_DEG;
     // double TxGoal = tx - 15;
     SmartDashboard.putNumber("TxGoal", TxGoal);
     SmartDashboard.putNumber("Tx", tx);
     System.out.println("robot position - x: " + swerve.getAprilOdom().getX() + " y: " + swerve.getAprilOdom().getY());
-    System.out.println("limelight position - x: " + AprilTagCoordinates.getX(26) + " y: " + AprilTagCoordinates.getY(26));
     double rotCMD = pid.calculate(errorDeg, 0.0);
     rotCMD = MathUtil.clamp(rotCMD, -maxOutput, maxOutput);
 
@@ -67,7 +69,7 @@ public void execute() {
 
 @Override
 public void end(boolean interrupted) {
-    swerve.drive(new Translation2d(0.0, 0.0)    , 0.0, true, true);
+    swerve.drive(new Translation2d(0.0, 0.0), 0.0, true, true);
     pid.reset();
 }
 

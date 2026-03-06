@@ -32,8 +32,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import frc.robot.commands.ShootButtonCommand;
-import frc.robot.commands.RecordSampleCommand;
+import frc.robot.commands.CoralShoot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.path.GoalEndState;
@@ -45,6 +44,10 @@ import com.pathplanner.lib.util.PPLibTelemetry;
 import com.pathplanner.lib.util.PathPlannerLogging;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.PathPlannerAuto;
+import frc.robot.subsystems.ArmStuff.Intake;
+import frc.robot.subsystems.ArmStuff.Wrist;
+import frc.robot.commands.WristMove;
+import frc.robot.commands.motortest;
 
 
 
@@ -72,31 +75,34 @@ public class RobotContainer {
 	private final int translationAxis = XboxController.Axis.kLeftY.value;
 	private final int strafeAxis = XboxController.Axis.kLeftX.value;
 	private final int rotationAxis = XboxController.Axis.kRightX.value;
+    private final int intakeVal = XboxController.Axis.kLeftTrigger.value;
+    private final int shooterForward = XboxController.Axis.kRightTrigger.value;
 
-    /* Upper Controls */
+
+    /* Upper Controls 
     private final int wristMove = XboxController.Axis.kRightY.value;
-    //private final int pickUp = XboxController.Axis.kLeftY.value;
+    private final int pickUp = XboxController.Axis.kLeftY.value;
     private final int elevatorMove = XboxController.Axis.kLeftY.value;
     private final int climbUp = XboxController.Axis.kRightTrigger.value;
     private final int climbDown = XboxController.Axis.kLeftTrigger.value;
-    //private final int climbUp = XboxController.Axis.kRightY.value;
-    private final int actuator2Move = XboxController.Axis.kLeftY.value;
+    private final int climbUp = XboxController.Axis.kRightY.value;
+    private final int actuator2Move = XboxController.Axis.kLeftY.value; */
 
     /* Upper Buttons */
     //private final JoystickButton shooterSpeedOne = new JoystickButton(upper, XboxController.Button.kA.value);
     //private final JoystickButton retractActuator = new JoystickButton(upper, XboxController.Button.kB.value);
     private final JoystickButton elevatorSetPoint1 = new JoystickButton(upper, XboxController.Button.kB.value);
-    private final JoystickButton shooterBackward = new JoystickButton(upper, XboxController.Button.kLeftBumper.value);
-    private final JoystickButton shooterForward = new JoystickButton(upper, XboxController.Button.kRightBumper.value);
+    //private final JoystickButton shooterBackward = new JoystickButton(upper, XboxController.Button.kLeftBumper.value);
+    //private final JoystickButton motorinput = new JoystickButton(upper, XboxController.Button.kRightBumper.value);
     private final JoystickButton wristSetPoint1 = new JoystickButton(upper, XboxController.Button.kY.value);
     private final JoystickButton wristSetPoint2 = new JoystickButton(upper, XboxController.Button.kX.value);
-    private final JoystickButton motorinput = new JoystickButton(upper, XboxController.Button.kA.value);
+    //private final JoystickButton motorinput = new JoystickButton(upper, XboxController.Button.kA.value);
 
     /* Driver Buttons */
-    private final JoystickButton zeroGyro = new JoystickButton(driver, XboxController.Button.kX.value);
+    private final JoystickButton wristMove = new JoystickButton(driver, XboxController.Button.kX.value);
     private final JoystickButton extendActuator = new JoystickButton(driver, XboxController.Button.kB.value);
-    private final JoystickButton retractActuator = new JoystickButton(driver, XboxController.Button.kLeftBumper.value);
-    private final JoystickButton dampen = new JoystickButton(driver, XboxController.Button.kRightBumper.value);
+    private final JoystickButton dampen = new JoystickButton(driver, XboxController.Button.kLeftBumper.value);
+    private final JoystickButton motorinput = new JoystickButton(driver, XboxController.Button.kRightBumper.value);
     private final JoystickButton DriveToApril = new JoystickButton(driver, XboxController.Button.kA.value);
     private final JoystickButton turretAutoAimButton = new JoystickButton(driver, XboxController.Button.kY.value);
     private final POVButton up = new POVButton(driver, 90);
@@ -115,6 +121,8 @@ public class RobotContainer {
     private final Actuator actuator = new Actuator();
     private final Climber climb = new Climber();
     private final PoseEstimator s_PoseEstimator = new PoseEstimator();
+    private final Intake intake = new Intake();
+    private final Wrist wrist = new Wrist();
 
 
     //private PathPlannerTrajectory trajectory;
@@ -133,18 +141,31 @@ public class RobotContainer {
             )
         );
 
-        motorinput.whileTrue(
+        motor.setDefaultCommand(
+            new motortest(
+                motor,
+                shooter,
+                () -> motorinput.getAsBoolean()
+            )
+        );
+
+        wrist.setDefaultCommand(
+            new WristMove(
+                wrist, 
+                () -> wristMove.getAsBoolean(),
+                () -> DriveToApril.getAsBoolean()
+            )
+        );
+
+       /*  motorinput.setDefaultCommand(
             new ShootButtonCommand(
                 s_Swerve,
                 shooter,
                 motor,
-                shooterLookup
+                shooterLookup,
+                () -> new Translation2d(-driver.getRawAxis(translationAxis), -driver.getRawAxis(strafeAxis))
             )
-        );
-
-        SmartDashboard.putNumber("Manual Shooter RPM", Double.NaN);
-        SmartDashboard.putNumber("ShooterLookup Count", shooterLookup.getEntryCount());
-        SmartDashboard.putData("Record Shooter Sample", new RecordSampleCommand(shooterLookup, shooter, s_Swerve));
+        ); */
         
         s_Swerve.setDefaultCommand(
             new TeleopSwerve(
@@ -155,11 +176,11 @@ public class RobotContainer {
                 () -> false,
                 () -> dampen.getAsBoolean(),
                 () -> 1, //speed multiplier 
-                () -> DriveToApril.getAsBoolean()
+                () -> false
 		
             )
         );
-    /* */    
+    /*     
         elevator.setDefaultCommand(
             new ElevatorRun(
                 elevator,
@@ -170,35 +191,34 @@ public class RobotContainer {
                 () -> wristSetPoint2.getAsBoolean()
             
             )
-        ); 
-        
+        );  */
+
+
+        intake.setDefaultCommand(
+            new IntakeRun(
+                intake,
+                () -> driver.getRawAxis(intakeVal)
+            )
+        );
 
         
 
         // Comment these out when testing drive// 
-        
+        /* 
         actuator2.setDefaultCommand(
             new Actuator2Run(
                 actuator2,
                 () -> extendActuator.getAsBoolean(),
                 () -> retractActuator.getAsBoolean()
             )
-        );
+        ); */
     
+        
         shooter.setDefaultCommand(
             new CoralShoot(
                 s_Swerve,
                 shooter,
-                () -> shooterForward.getAsBoolean(), 
-                () -> shooterBackward.getAsBoolean()
-            )
-        );
-
- 
-        motor.setDefaultCommand(
-            new motortest(
-                motor,
-                () -> motorinput.getAsBoolean()
+                () -> driver.getRawAxis(shooterForward)
             )
         );
         
@@ -222,14 +242,14 @@ public class RobotContainer {
             )
         );
          */
-        
+        /* 
         climb.setDefaultCommand(
             new Climb(
                 climb,
                 () -> driver.getRawAxis(climbUp),
                 () -> driver.getRawAxis(climbDown)
             )
-        );
+        ); */
     
         /*
         s_Swerve.setDefaultCommand(
@@ -240,6 +260,13 @@ public class RobotContainer {
         );
         */
         
+        SmartDashboard.putData("SysId Quasistatic Forward", shooter.sysIdQuasistaticForward());
+        SmartDashboard.putData("SysId Quasistatic Reverse", shooter.sysIdQuasistaticReverse());
+        SmartDashboard.putData("SysId Dynamic Forward", shooter.sysIdDynamicForward());
+        SmartDashboard.putData("SysId Dynamic Reverse", shooter.sysIdDynamicReverse());
+
+
+
         // Configure the button bindings
         configureButtonBindings();
 
@@ -279,7 +306,7 @@ public class RobotContainer {
      */
     private void configureButtonBindings() {
         /* Driver Buttons */
-        zeroGyro.onTrue(new InstantCommand(() -> s_Swerve.zeroGyro()));
+        s_Swerve.zeroGyro();
         
 
 

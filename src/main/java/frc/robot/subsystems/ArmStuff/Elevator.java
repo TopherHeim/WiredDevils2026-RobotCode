@@ -29,7 +29,7 @@ public class Elevator extends SubsystemBase implements ArmConstants {
     public Elevator(){
         
         elevator = new SparkMax(elevatorId, MotorType.kBrushless);
-        wrist = new SparkMax(wristId, MotorType.kBrushless);
+        wrist = new SparkMax(200, MotorType.kBrushless);
 
         eleEnc = elevator.getEncoder();
         wristEnc = wrist.getEncoder();
