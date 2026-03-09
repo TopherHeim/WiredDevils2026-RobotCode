@@ -115,6 +115,7 @@ public class RobotContainer {
     private final Actuator actuator = new Actuator();
     private final Climber climb = new Climber();
     private final PoseEstimator s_PoseEstimator = new PoseEstimator();
+    
 
 
     //private PathPlannerTrajectory trajectory;
@@ -129,7 +130,8 @@ public class RobotContainer {
         turretAutoAimButton.whileTrue(
             new AimTurretCommand(
                 s_Swerve,
-                () -> new Translation2d(-driver.getRawAxis(translationAxis), -driver.getRawAxis(strafeAxis))
+                () -> new Translation2d(-driver.getRawAxis(translationAxis), -driver.getRawAxis(strafeAxis)),
+                shooterLookup
             )
         );
 
@@ -138,7 +140,8 @@ public class RobotContainer {
                 s_Swerve,
                 shooter,
                 motor,
-                shooterLookup
+                shooterLookup,
+                () -> new Translation2d(-driver.getRawAxis(translationAxis), -driver.getRawAxis(strafeAxis))
             )
         );
 
