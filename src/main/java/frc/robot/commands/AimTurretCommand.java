@@ -55,74 +55,79 @@ public void initialize() {
 
 @Override
 public void execute() {
-
-    /* I don't know if I care if we have a target this simply use the robot yaw angle (field relative) 
-
-    boolean hasTarget = tvEntry.getDouble(0.0) >= 1.0;
-    if (!hasTarget) {
-        swerve.drive(translationSupplier.get().times(3), 0.0, true, true);
-        return;
-    }
-        */
-
     ChassisSpeeds robotSpeeds = SwerveConfig.swerveKinematics.toChassisSpeeds(swerve.getModuleStates());
     ChassisSpeeds fieldSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotSpeeds, swerve.getYaw());
 
-    // These will need to chagne based on Alliance for Blue vs. Red Hub.  Note that the math below is for y flipped vs. FRC coordinates.  Angle should be correct.
     double dx = 4.611624 - swerve.getAprilOdom().getX();
     double dy = 4.021328 - swerve.getAprilOdom().getY();
     double targetdistance = Math.sqrt((dx * dx) + (dy * dy));
 
     double Vx = fieldSpeeds.vxMetersPerSecond;
-    double Vy = fieldSpeeds.vyMetersPerSecond;  // Note the negative sign to flip the y direction for the math below.  This is because the math is based on a coordinate system where positive y is up, but in FRC coordinates, positive y is forward.
+    double Vy = fieldSpeeds.vyMetersPerSecond;
 
-    double launchAngleDeg = 50; // This is a guess.  Use static testing and adjust is not making shots
-    double launchAngleRad = Math.toRadians(launchAngleDeg);
-    double launchHeight = 0.457;   
-    double hubHeight = 1.8288;    
-    double heightDiff = hubHeight - launchHeight; 
-
+    double launchAngleDeg = 50;
+    double launchHeight = 0.457;
+    double hubHeight = 1.8288;
+    double heightDiff = hubHeight - launchHeight;
     double g = 9.81;
-    double cosA = Math.cos(launchAngleRad);
-    double sinA = Math.sin(launchAngleRad);
     double flightTime = 1.0;
+    double RPM = 0.0;
+    double kMagnus = 0.0003; //Will need tuning
 
-    double t = 2.0; // Initial guess for time
+    double effectiveAngleRad = Math.toRadians(launchAngleDeg);
 
-// Solving for time using Newton's method.  Note: May want to set limit for both distance and Vx/Vy to assure a possible solution.
     if (targetdistance >= 2) {
+        boolean converged = true;
 
-        for (int i = 1; i < 20; i++) {
-            double f = Math.pow(heightDiff + 0.5 * g * t * t, 2) / Math.pow(Math.tan(launchAngleRad),2) - Math.pow((dx - Vx * t),2) - Math.pow((dy - Vy * t),2);
-            if (Math.abs(f) < 1e-3) {
-                flightTime = t;
-                break;
+        for (int angleIter = 0; angleIter < 5; angleIter++) {
+            double t = 2.0;
+            converged = true;
+
+            for (int i = 0; i < 20; i++) {
+                double tanA = Math.tan(effectiveAngleRad);
+                double sinA = Math.sin(effectiveAngleRad);
+                double f = Math.pow(heightDiff + 0.5 * g * t * t, 2) / Math.pow(tanA, 2)- Math.pow((dx - Vx * t), 2)- Math.pow((dy - Vy * t), 2);
+
+                if (Math.abs(f) < 1e-3) {
+                    flightTime = t;
+                    break;
+                }
+
+                if (i == 19) {
+                    System.out.println("Newton's method did not converge");
+                    converged = false;
+                    break;
+                }
+
+                double dfdt = 2 * g * t * (heightDiff + 0.5 * g * t * t) / Math.pow(tanA, 2)- 2 * Vx * (dx - Vx * t)- 2 * Vy * (dy - Vy * t);
+                t = t - f / dfdt;
+                if (t < 0) t = 4.0;
             }
 
-            double dfdt = 2 * g * t * (heightDiff + 0.5 * g * t * t) / Math.pow(Math.tan(launchAngleRad),2) - 2 * Vx * (dx - Vx * t) - 2 * Vy * (dy - Vy * t);
-            t = t - f / dfdt;
-            if (t < 0) {
-                t = 4; // Prevent negative time
-            }
-            if (i == 19) 
-                {System.out.println("Newton's method did not converge");
-                return;
-            }
+            if (!converged) return;
+
+            double launchSpeed = (heightDiff + 0.5 * g * flightTime * flightTime)
+                               / (Math.sin(effectiveAngleRad) * flightTime);
+            double distance_conv = 2.02395 * launchSpeed - 11.22416;
+            RPM = -471.08803 * distance_conv - 2516.1188;
+
+            double magnusCorrection = kMagnus * Math.abs(RPM);
+            effectiveAngleRad = Math.toRadians(launchAngleDeg + magnusCorrection);
         }
+    } else {
+        System.out.println("Too close to find solution");
+        return;
     }
-    else {System.out.println("Too close to find solution"); }
 
-    double launchSpeed = (heightDiff + 0.5 * g * flightTime * flightTime) / (sinA * flightTime);
-    double distance_conv = 2.02395 * launchSpeed - 11.22416; // This gives a distance for a stationary shot for conversion to RPM
-    double RPM = -471.08803 * distance_conv - 2516.1188;
-    double TraverseAngle = Math.atan2(dy/flightTime - Vy, dx/flightTime - Vx);
-    
+    double launchSpeed = (heightDiff + 0.5 * g * flightTime * flightTime)/(Math.sin(effectiveAngleRad) * flightTime);
+    double distance_conv = 2.02395 * launchSpeed - 11.22416;
+    RPM = -471.08803 * distance_conv - 2516.1188;
 
+    double TraverseAngle = Math.atan2(dy / flightTime - Vy, dx / flightTime - Vx);
     double currentHeadingRad = swerve.getYaw().getRadians();
     double errorDeg = Math.toDegrees(MathUtil.angleModulus(TraverseAngle - currentHeadingRad));
     double rotCMD = MathUtil.clamp(pid.calculate(0.0, errorDeg), -maxOutput, maxOutput);
 
-    // Dashboard
     SmartDashboard.putNumber("errorDeg", errorDeg);
     SmartDashboard.putNumber("LaunchSpeed", launchSpeed);
     SmartDashboard.putNumber("FlightTime", flightTime);
@@ -134,10 +139,14 @@ public void execute() {
     SmartDashboard.putNumber("Vx", Vx);
     SmartDashboard.putNumber("Vy", Vy);
     SmartDashboard.putNumber("Total Dist", targetdistance);
+    SmartDashboard.putNumber("EffectiveLaunchAngle", Math.toDegrees(effectiveAngleRad));
+    SmartDashboard.putNumber("MagnusCorrection", kMagnus * Math.abs(RPM));
+
     double translationVal = MathUtil.applyDeadband(translationSup.getAsDouble(), Constants.stickDeadband);
     double strafeVal = MathUtil.applyDeadband(strafeSup.getAsDouble(), Constants.stickDeadband);
     swerve.drive(new Translation2d(translationVal, strafeVal).times(3), rotCMD, true, true);
-    if (shooterForward.getAsDouble() > 0.1){
+
+    if (shooterForward.getAsDouble() > 0.1) {
         shooter.setTargetRpm(RPM);
     }
 }
