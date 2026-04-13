@@ -26,14 +26,14 @@ public class SwerveConfig
     public static final double anglePower = .9;
 
 
-    public static final boolean invertGyro = true; // Always ensure Gyro is CCW+ CW-
+    public static final boolean invertGyro = false; // Always ensure Gyro is CCW+ CW-
 
     public static final COTSNeoSwerveConstants chosenModule =  
         COTSNeoSwerveConstants.SDSMK4(COTSNeoSwerveConstants.driveGearRatios.SDSMK4_L2);
 
     /* Drivetrain Constants */
-    public static final double trackWidth = Units.inchesToMeters(18.0); 
-    public static final double wheelBase = Units.inchesToMeters(20.0); 
+    public static final double trackWidth = Units.inchesToMeters(20.5); 
+    public static final double wheelBase = Units.inchesToMeters(20.5); 
     public static final double wheelCircumference = chosenModule.wheelCircumference;
 
 

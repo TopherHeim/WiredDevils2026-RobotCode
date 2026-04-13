@@ -1,10 +1,10 @@
 package frc.robot.subsystems.turret;
 
 public class TurretConstants {
-    public static double kP = .08;
+    public static double kP = .2;
     //DONT CHANGE I
     public static double kI = 0.0;
-    public static double kD = 0.0;
+    public static double kD = 0.0005;
 
     public static final double MAX_OUTPUT = 3;
 
